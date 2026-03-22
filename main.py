@@ -6,6 +6,26 @@ import os
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
+class Cell:
+    __init__(self, status="cross", color="blank", coordx, coordy)):
+        self.status = status
+        self.color = color
+        self.coord = (coordx, coordy)
+
+    def return_color():
+        return self.color
+
+    def return_status():
+        return self.status
+
+class Game:
+    __init__(self):
+        self.players = {
+                "player1": "",
+                "player2": "",
+                }
+
+
 # завантажуємо змінні з .env
 load_dotenv()
 TOKEN = os.getenv("API_TOKEN")
@@ -17,9 +37,9 @@ dp = Dispatcher()
 async def start_handler(message: types.Message):
     await message.answer("Бот працює ✅")
 
-@dp.message()
-async def echo_handler(message: types.Message):
-    await message.answer(f"Ти написав: {message.text}")
+@dp.message(Command("play"))
+async def start_handler(message: types.Message):
+    pass
 
 async def on_startup():
     print("Бот готовий до роботи 🚀")
