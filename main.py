@@ -7,13 +7,12 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
 class Cell:
-    __init__(self, status="cross", color="blank", coordx, coordy, available=True)):
+    def __init__( self, status="cross", color="blank", available=True ):
         self.status = status
         self.color = color
-        self.coord = (coordx, coordy)
         self.available = available
 
-    def return_info(info):
+    def return_info(self, info):
         match info:
             case "coord":
                 return self.coord
@@ -23,27 +22,27 @@ class Cell:
                 return self.status
             case "available":
                 return self.available
-            case _:
+            case _ :
                 return None
 
 
 class Game:
-    __init__(self, player1="", player2=""):
+    def __init__(self, player1="", player2=""):
         self.players = {
                 "player1": player1,
                 "player2": player2,
                 }
         self.table = [] 
 
-    def generate_table(table_size=9):
+    def generate_table(self, table_size=9):
         for i in range(table_size):
             self.table.append([])
         for i in range(table_size):
             for j in range(table_size):
                 self.table[i].append(Cell())
 
-    def show_table():
-        result = f"⏹️1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣/n"       #тут координати стовпців у вигляді емоджі
+    def show_table(self):
+        result = f"⏹️1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣\n"       #тут координати стовпців у вигляді емоджі
         for i in range(len(self.table)):
             match i:
                 case 0:
@@ -64,18 +63,18 @@ class Game:
                     result += "2️⃣"   #2
                 case 8:
                     result += "1️⃣"   #1
-                
+
             for item in self.table[i]:
-                if item.color = "blank":
+                if item.color == "blank":
                     result += "➕"
-                elif item.color = "white":
+                elif item.color == "white":
                     result += "⚪️"
-                elif item.color = "black":
+                elif item.color == "black":
                     result += "⚫️"
                 else:
                     result += "|"
 
-            result += "/n"
+            result += "\n"
         return result
 
 # завантажуємо змінні з .env
@@ -85,6 +84,9 @@ TOKEN = os.getenv("API_TOKEN")
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 GAME = Game()
+
+pending_duels = {}
+games = {}
 
 @dp.message(Command("start"))
 async def start_handler(message: types.Message):
@@ -97,6 +99,36 @@ async def start_handler(message: types.Message):
     await message.answer("Гру створено.")
     await message.answer("Виводиться стіл...")
     await message.answer(GAME.show_table())
+
+@dp.message(Command("duel"))
+async def duel_handler(message: types.Message):
+    if not message.reply_to_message:
+        await message.answer("Відповідай на повідомлення гравця (/duel)")
+        return
+
+    challenger = message.from_user
+    opponent = message.reply_to_message.from_user
+    chat_id = message.chat.id
+
+    if challenger.id == opponent.id:
+        await message.answer("Не можна викликати самого себе 😄")
+        return
+
+    if chat_id in games:
+        await message.answer("Гра вже йде в цьому чаті")
+        return
+
+    pending_duels[chat_id] = {
+        "challenger": challenger.id,
+        "opponent": opponent.id
+    }
+
+    await message.answer(
+        f"⚔️ {challenger.first_name} викликає {opponent.first_name} на дуель!\n\n"
+        f"{opponent.first_name}, відповідай:\n"
+        f"/accept — прийняти\n"
+        f"/reject — відхилити"
+    )
 
 async def on_startup():
     print("Бот готовий до роботи 🚀")
