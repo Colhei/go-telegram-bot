@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 import os
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+from game import *
 
 class Cell:
     def __init__( self, status="cross", color="blank", available=True ):
