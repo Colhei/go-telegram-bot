@@ -23,20 +23,36 @@ TURN = 0
 
 PLAYERS = []
 
-TABLE = []
-
+PENDING_GAMES_INFO = {}             # у форматі { ( 1гравець, 2гравець ) : [ [черга], [ *стіл* ] ] }
 PENDING_GAMES = {}                  # у форматі { 1гравець : 2гравець },           де 1 гравець - отримувач, чорні,
 PENDING_DUEL_REQUESTS = {}          # у форматі { 1гравець : 2гравець }             а 2 гравець - відправник, білі
 
 def _gen_table(table_size=9):
+    result = []
     print("\n"+f"generating table {table_size}x{table_size}")
     for i in range(table_size):
-        TABLE.append([])
+        result.append([])
         for j in range(table_size):
-            TABLE[i].append(Cell())
+            result[i].append(Cell())
     print("\n"+"table generated")
+    return result
 
-def Print_table():
+def Return_table(player):
+    found = False
+    for key in PENDING_GAMES:
+        if key == player:
+            found = True
+            players_tuple = (key, PENDING_GAMES[key])
+            break
+        elif PENDING_GAMES[key] == player:
+            found = True
+            players_tuple = (key, PENDING_GAMES[key])
+            break
+    if not found:
+        print(f"error: did not find the table of the player {player}")
+        return f"Не знайдено вашого стола."
+        
+    table = PENDING_GAMES_INFO[players_tuple][1]
     result = ""
     printable = [ "9️⃣", "8️⃣", "7️⃣", "6️⃣", "5️⃣", "4️⃣", "3️⃣", "2️⃣", "1️⃣" ]
     result += "⏹️"
@@ -46,9 +62,16 @@ def Print_table():
     for i in range(9):
         result += printable[i]
         for j in range(9):
-            match TABLE[i][j].return_info("status"):
+            match table[i][j].return_info("status"):
                 case "cross":
-                    result += "➕"
+                    if (i == 4 and j == 4 or
+                        i == 2 and j == 6 or
+                        i == 6 and j == 6 or
+                        i == 2 and j == 2 or
+                        i == 2 and j == 6):
+                        result += "➕"
+                    else:
+                        result += "➕"
                 case "white":
                     result += "⚪️"
                 case "black":
@@ -85,17 +108,49 @@ def Check_pending_requests():
         print(f"{key} → {PENDING_DUEL_REQUESTS[key]}\n")
     return result
 
-def Make_move(current_player):
-    pass
+def Make_move(current_player, destination):
+    dest = (int(destination[0])-1, 9-int(destination[1]))
+    color = ""
+    for key in PENDING_GAMES:
+        if current_player == key:
+            color = "black"
+            players_tuple = (key, PENDING_GAMES[key])
+        elif current_player == PENDING_GAMES[key]:
+            color = "white"
+            players_tuple = (key, PENDING_GAMES[key])
+    
+    order = PENDING_GAMES_INFO[players_tuple][0]
+    if order[0][0] == "p":
+        order[0] = "white" if order[0] == "pwhite" else "black"
+    if order[0] == color:
+        table = PENDING_GAMES_INFO[players_tuple][1]
+        if table[dest[0]][dest[1]].available:
+            table[dest[0]][dest[1]].status = color
+            table[dest[0]][dest[1]].available = False
+            print(f"{current_player} successfully made a move - {color} to the {dest[0]} - {dest[1]}")
+            order[0] = "white" if order[0] == "black" else "black"
+            return f"Ви зробили хід, очікуємо на відповідь іншого гравця"
+        else:
+            print(f"error upon trying to make a move by {current_player}")
+            return f"Неможливий хід, спробуйте походити у інше місце"
+    else:
+        print(f"player tryed to make a move out of order")
+        return f"Ще не ваш хід. Дочекайтеся суперника та зробіть хід після нього"
+
+    PENDING_GAMES_INFO[players_dict]
+
 
 def Start_game(table_size=9, player1="player1", player2="player2"):
-    _gen_table(table_size)
-    PLAYERS.append(player1)
-    PLAYERS.append(player2)
+    players_tuple = (player1, player2) 
+    PENDING_GAMES_INFO[players_tuple] = [ ["black"], _gen_table(table_size) ]
+    print(f"added {player1} & {player2}'s game to the dictionary")
+    print(players_tuple)
+    print(PENDING_GAMES_INFO[players_tuple])
+    
 
 def _clear_info():
     PLAYERS = []
     TABLE = []
-    TURN = 0
     PENDING_GAMES = {}
-    PENDING_DUELS = {}
+    PENDING_DUEL_REQUESTS = {}
+    PENDING_GAMES_INFO = {}

@@ -19,13 +19,6 @@ dp = Dispatcher()
 async def start_handler(message: types.Message):
     await message.answer("Бот працює ✅")
 
-@dp.message(Command("play"))
-async def start_game(message: types.Message):
-    Start_game()
-    print("\ntable generating request sent")
-    await message.answer("Гру створено")
-    await message.answer(Print_table())
-
 @dp.message(Command("duel"))
 async def to_challenge(message: types.Message, command: CommandObject):
     player1 = command.args
@@ -46,6 +39,15 @@ async def accept_duel_request(message: types.Message, command: CommandObject):
     else:
         print(f"player {player1} is trying to accept {player2}'s duel request but no result")
         await message.answer(f"Не вдалося прийняти виклик")
+
+    Start_game(player1=player1, player2=player2)
+    await message.answer(Return_table(player1))
+
+@dp.message(Command("show_table"))
+async def show_table(message: types.Message):
+    player = "@" + message.from_user.username
+    print(f"showing the table")
+    await message.answer(Return_table(player))
 
 @dp.message(Command("check_games"))
 async def check_pending_games(message: types.Message):
@@ -70,8 +72,14 @@ async def check_pending_requests(message: types.Message):
         await message.answer(result)
 
 @dp.message(Command("move"))
-async def make_move(message: types.Message):
-    pass
+async def make_move(message: types.Message, command: CommandObject):
+    current_player = "@" + message.from_user.username
+    destination = command.args
+    print(f"{current_player} is trying to put a rock at the {destination}")
+    result = Make_move(current_player, destination)
+    await message.answer(result)
+    await message.answer(Return_table(current_player))
+    
 
 async def on_startup():
     print("Bot is ready for work 🚀")
