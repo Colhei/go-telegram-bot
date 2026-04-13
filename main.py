@@ -1,82 +1,12 @@
 import asyncio
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
+from aiogram.filters.command import CommandObject
 from dotenv import load_dotenv
 import os
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 from game import *
-
-class Cell:
-    def __init__( self, status="cross", color="blank", available=True ):
-        self.status = status
-        self.color = color
-        self.available = available
-
-    def return_info(self, info):
-        match info:
-            case "coord":
-                return self.coord
-            case "color":
-                return self.color
-            case "status":
-                return self.status
-            case "available":
-                return self.available
-            case _ :
-                return None
-
-
-class Game:
-    def __init__(self, player1="", player2=""):
-        self.players = {
-                "player1": player1,
-                "player2": player2,
-                }
-        self.table = [] 
-
-    def generate_table(self, table_size=9):
-        for i in range(table_size):
-            self.table.append([])
-        for i in range(table_size):
-            for j in range(table_size):
-                self.table[i].append(Cell())
-
-    def show_table(self):
-        result = f"⏹️1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣\n"       #тут координати стовпців у вигляді емоджі
-        for i in range(len(self.table)):
-            match i:
-                case 0:
-                    result += "9️⃣"   #9
-                case 1:
-                    result += "8️⃣"   #8
-                case 2:
-                    result += "7️⃣"   #7
-                case 3:
-                    result += "6️⃣"   #6
-                case 4:                         #тут додається нумерація для рядків
-                    result += "5️⃣"   #5
-                case 5:
-                    result += "4️⃣"   #4
-                case 6:
-                    result += "3️⃣"   #3
-                case 7:
-                    result += "2️⃣"   #2
-                case 8:
-                    result += "1️⃣"   #1
-
-            for item in self.table[i]:
-                if item.color == "blank":
-                    result += "➕"
-                elif item.color == "white":
-                    result += "⚪️"
-                elif item.color == "black":
-                    result += "⚫️"
-                else:
-                    result += "|"
-
-            result += "\n"
-        return result
 
 # завантажуємо змінні з .env
 load_dotenv()
@@ -84,60 +14,72 @@ TOKEN = os.getenv("API_TOKEN")
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
-GAME = Game()
-
-pending_duels = {}
-games = {}
 
 @dp.message(Command("start"))
 async def start_handler(message: types.Message):
     await message.answer("Бот працює ✅")
 
 @dp.message(Command("play"))
-async def start_handler(message: types.Message):
-    await message.answer("Гра запускається...")
-    GAME.generate_table()
-    await message.answer("Гру створено.")
-    await message.answer("Виводиться стіл...")
-    await message.answer(GAME.show_table())
+async def start_game(message: types.Message):
+    Start_game()
+    print("\ntable generating request sent")
+    await message.answer("Гру створено")
+    await message.answer(Print_table())
 
 @dp.message(Command("duel"))
-async def duel_handler(message: types.Message):
-    if not message.reply_to_message:
-        await message.answer("Відповідай на повідомлення гравця (/duel)")
-        return
+async def to_challenge(message: types.Message, command: CommandObject):
+    player1 = command.args
+    player2 = "@" + message.from_user.username            # гравець 1 - отримувач, гравець 2 - відправник
+    print(f"\nduel request pending. \nplayers: 1 - {player1} 2 - {player2}")
+    To_challenge(player1, player2)
+    await message.answer(f"{player2} кидає виклик {player1}")
 
-    challenger = message.from_user
-    opponent = message.reply_to_message.from_user
-    chat_id = message.chat.id
+@dp.message(Command("accept"))
+async def accept_duel_request(message: types.Message, command: CommandObject):
+    player1 = "@" + message.from_user.username
+    player2 = command.args
+    print(f"accepting duel requested to game script. {player1} is trying to accept {player2}'s request.")
+    result = Accept_duel_request(player1, player2)
+    if result:
+        print(f"player {player1} accepting {player2}'s duel request")
+        await message.answer(f"{player1} приймає виклик {player2}")
+    else:
+        print(f"player {player1} is trying to accept {player2}'s duel request but no result")
+        await message.answer(f"Не вдалося прийняти виклик")
 
-    if challenger.id == opponent.id:
-        await message.answer("Не можна викликати самого себе 😄")
-        return
+@dp.message(Command("check_games"))
+async def check_pending_games(message: types.Message):
+    print("started checking pending games.")
+    result = Check_pending_games()
+    if result:
+        print("checking pending games function found some results, they are sent by bot")
+        await message.answer(result)
+    else:
+        print("checking pending games function did not find any pending game")
+        await message.answer("Не знайдено жодної гри")
 
-    if chat_id in games:
-        await message.answer("Гра вже йде в цьому чаті")
-        return
+@dp.message(Command("check_requests"))
+async def check_pending_requests(message: types.Message):
+    print("started checking pending duel requests.")
+    result = Check_pending_requests()
+    if result:
+        print("checking pending duel requests function found some results, they are sent by bot")
+        await message.answer(result)
+    else:
+        print("checking pending duel requests function did not find any pending requests")
+        await message.answer(result)
 
-    pending_duels[chat_id] = {
-        "challenger": challenger.id,
-        "opponent": opponent.id
-    }
-
-    await message.answer(
-        f"⚔️ {challenger.first_name} викликає {opponent.first_name} на дуель!\n\n"
-        f"{opponent.first_name}, відповідай:\n"
-        f"/accept — прийняти\n"
-        f"/reject — відхилити"
-    )
+@dp.message(Command("move"))
+async def make_move(message: types.Message):
+    pass
 
 async def on_startup():
-    print("Бот готовий до роботи 🚀")
+    print("Bot is ready for work 🚀")
 
 async def main():
-    print("Бот запустився")
+    print("Bot has started")
     await dp.start_polling(bot, on_startup=on_startup)
-    print("Бота зупинено")
+    print("Bot has stopped")
 
 if __name__ == "__main__":
     asyncio.run(main())
