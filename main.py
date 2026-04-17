@@ -79,7 +79,14 @@ async def make_move(message: types.Message, command: CommandObject):
     result = Make_move(current_player, destination)
     await message.answer(result)
     await message.answer(Return_table(current_player))
-    
+
+@dp.message(Command("pass"))
+async def pass_turn(message: types.Message):
+    current_player = "@" + message.from_user.username
+    print(f"player {current_player} is trying to pass his turn. Request was sent to the game script")
+    result = Pass_turn(current_player)
+    await message.answer(result)
+    await message.answer(Return_table(current_player))
 
 async def on_startup():
     print("Bot is ready for work 🚀")

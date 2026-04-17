@@ -8,14 +8,16 @@ class Cell():
 
     def return_info(self, info):
         match info:
-            case "coord":
-                return self.coord
             case "status":
                 return self.status
             case "available":
                 return self.available
         return None
 
+class Counting_cell():
+    def __init__(self):
+        self.status = ["blank", "balnk"]
+        self.countable = True
 
 ########################################### ГРА ######################################################
 
@@ -53,15 +55,16 @@ def Return_table(player):
         return f"Не знайдено вашого стола."
         
     table = PENDING_GAMES_INFO[players_tuple][1]
+    table_size = len(table)
     result = ""
+    printablel = [ "A", "B", "C", "D", "E", "F", "G", "H", "I " ]
     printable = [ "9️⃣", "8️⃣", "7️⃣", "6️⃣", "5️⃣", "4️⃣", "3️⃣", "2️⃣", "1️⃣" ]
-    result += "⏹️"
     for i in range(8, -1, -1):
         result += printable[i]
+    result += "⏹️"
     result += "\n"
-    for i in range(9):
-        result += printable[i]
-        for j in range(9):
+    for i in range(table_size):
+        for j in range(table_size):
             match table[i][j].return_info("status"):
                 case "cross":
                     if (i == 4 and j == 4 or
@@ -76,7 +79,7 @@ def Return_table(player):
                     result += "⚪️"
                 case "black":
                     result += "⚫️"
-        result += "\n"
+        result += f"|{printablel[i]}|\n"
     return result
 
 def To_challenge(player1, player2):
@@ -108,8 +111,10 @@ def Check_pending_requests():
         print(f"{key} → {PENDING_DUEL_REQUESTS[key]}\n")
     return result
 
-def Make_move(current_player, destination):
-    dest = (int(destination[0])-1, 9-int(destination[1]))
+def Make_move(current_player, destination):                 # назначення у форматі ( число_стовпця, 'буква_рядка' )
+    letter = int(ord(destination[1]))-97
+    number = int(destination[0])-1
+    dest = (letter, number)
     color = ""
     for key in PENDING_GAMES:
         if current_player == key:
@@ -119,17 +124,17 @@ def Make_move(current_player, destination):
             color = "white"
             players_tuple = (key, PENDING_GAMES[key])
     
-    order = PENDING_GAMES_INFO[players_tuple][0]
-    if order[0][0] == "p":
-        order[0] = "white" if order[0] == "pwhite" else "black"
-    if order[0] == color:
+    turn = PENDING_GAMES_INFO[players_tuple][0]
+    if turn[0][0] == "p":
+        turn[0] = "white" if turn[0] == "pwhite" else "black"
+    if turn[0] == color:
         table = PENDING_GAMES_INFO[players_tuple][1]
         if table[dest[0]][dest[1]].available:
             table[dest[0]][dest[1]].status = color
             table[dest[0]][dest[1]].available = False
             print(f"{current_player} successfully made a move - {color} to the {dest[0]} - {dest[1]}")
-            order[0] = "white" if order[0] == "black" else "black"
-            return f"Ви зробили хід, очікуємо на відповідь іншого гравця"
+            turn[0] = "white" if turn[0] == "black" else "black"
+            return f"Ви зробили хід, очікуємо на відповідь гравця {players_tuple[0] if turn[0] == "black" else players_tuple[1]}"
         else:
             print(f"error upon trying to make a move by {current_player}")
             return f"Неможливий хід, спробуйте походити у інше місце"
@@ -137,8 +142,28 @@ def Make_move(current_player, destination):
         print(f"player tryed to make a move out of order")
         return f"Ще не ваш хід. Дочекайтеся суперника та зробіть хід після нього"
 
-    PENDING_GAMES_INFO[players_dict]
-
+def Pass_turn(player):
+    for key in PENDING_GAMES:
+        if player == key:
+            color = "white"
+            players_tuple = (key, PENDING_GAMES[key])
+        elif player == PENDING_GAMES[key]:
+            color = "black"
+            players_tuple = (key, PENDING_GAMES[key])
+        else:
+            print(f"player {player} can not pass their turn. Did not find their table")
+            return f"Неможливо пропустити хід, не граючи жодної гри."
+    turn = PENDING_GAMES_INFO[players_tuple][0]
+    if turn[0][0] == "p":
+        if "p"+color != turn:
+            print(f"player {player} can not pass their turn. Not their turn.")
+            return f"Неможливо пропустити хід. Ще не ваша черга."
+        print(f"player {player} passed his turn, ending the game")
+        return Finnish_game(players_tuple)
+    else:
+        turn[0] = "pwhite" if turn[0] == "black" else "pblack"
+        print(f"player {player} passed their turn. Waiting for the opponent's respond.")
+        return f"Ви пропустили хід. Далі хід {players_tuple[0] if turn[0] == "black" else players_tuple[1]}"
 
 def Start_game(table_size=9, player1="player1", player2="player2"):
     players_tuple = (player1, player2) 
@@ -147,6 +172,11 @@ def Start_game(table_size=9, player1="player1", player2="player2"):
     print(players_tuple)
     print(PENDING_GAMES_INFO[players_tuple])
     
+def _finnish_game(players_tuple):
+    PENDING_GAMES.pop(players_tuple[0])
+    PENDING_GAMES_INFO.pop(players_tuple)
+    print(f"the game of {players_tuples[0]} and {players_tuple[1]} has ended. Cleared info of their game.")
+    return f"Ви пропустили хід, гру завершено."
 
 def _clear_info():
     PLAYERS = []
