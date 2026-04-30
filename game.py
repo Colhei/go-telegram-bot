@@ -88,34 +88,43 @@ def _analyze_group(players_tuple, coord, color, visited=None):
         visited = []
     visited.append(coord)
     table = PENDING_GAMES_INFO[players_tuple][1]
-    coord_lt = (coord[0]-1, coord[1])
-    coord_up = (coord[0], coord[1]-1)
-    coord_rt = (coord[0]+1, coord[1])
-    coord_dn = (coord[0], coord[1]+1)
+    coord_lt = (coord[0], coord[1]-1)
+    coord_up = (coord[0]-1, coord[1])
+    coord_rt = (coord[0], coord[1]+1)
+    coord_dn = (coord[0]+1, coord[1])
     result_up = False
     result_lt = False
     result_rt = False
     result_dn = False
-    if coord_up[1] >= 0 and not coord_up in visited:
+    result = result_lt = result_up = result_rt = result_dn = 0
+    if coord_up[0] >= 0 and not coord_up in visited:
         if table[coord_up[0]][coord_up[1]].return_info("status") == color:
             result_up = _analyze_group(players_tuple, coord_up, color, visited)
-        elif table[coord_up[0]][coord_up[1]].return_info("status") == "cross":
+        elif table[coord_up[0]][coord_up[1]].available:
             return True
-    if coord_lt[0] >= 0 and not coord_lt in visited:
+        else:
+            return False
+    if coord_lt[1] >= 0 and not coord_lt in visited:
         if table[coord_lt[0]][coord_lt[1]].return_info("status") == color:
             result_lt = _analyze_group(players_tuple, coord_lt, color, visited)
-        elif table[coord_lt[0]][coord_lt[1]].return_info("status") == "cross":
+        elif table[coord_lt[0]][coord_lt[1]].available:
             return True
-    if coord_rt[0] <= 8 and not coord_rt in visited:
+        else:
+            return False
+    if coord_rt[1] <= 8 and not coord_rt in visited:
         if table[coord_rt[0]][coord_rt[1]].return_info("status") == color:
             result_rt = _analyze_group(players_tuple, coord_rt, color, visited)
-        elif table[coord_rt[0]][coord_rt[1]].return_info("status") == "cross":
+        elif table[coord_rt[0]][coord_rt[1]].available:
             return True
-    if coord_dn[1] <= 8 and not coord_dn in visited:
+        else:
+            return False
+    if coord_dn[0] <= 8 and not coord_dn in visited:
         if table[coord_dn[0]][coord_dn[1]].return_info("status") == color:
             result_dn = _analyze_group(players_tuple, coord_dn, color, visited)
-        elif table[coord_dn[0]][coord_dn[1]].return_info("status") == "cross":
+        elif table[coord_dn[0]][coord_dn[1]].available:
             return True
+        else:
+            return False
     result = result_lt or result_up or result_rt or result_dn
     return result
 
@@ -123,6 +132,7 @@ def _remove_group(players_tuple, coord, color, p=0, visited=None):
     if visited == None:
         visited = []
     visited.append(coord)
+    p += 1
     table = PENDING_GAMES_INFO[players_tuple][1]
     coord_lt = (coord[0]-1, coord[1])
     coord_up = (coord[0], coord[1]-1)
@@ -130,18 +140,19 @@ def _remove_group(players_tuple, coord, color, p=0, visited=None):
     coord_dn = (coord[0], coord[1]+1)
     table[coord[0]][coord[1]].status = "cross"
     table[coord[0]][coord[1]].available = True
+    result = result_lt = result_up = result_rt = result_dn = 0
     if coord_up[1] >= 0 and not coord_up in visited:
         if table[coord_up[0]][coord_up[1]].return_info("status") == color:
-            result_up = _remove_group(players_tuple, coord_up, color, p+1, visited)
+            result_up = _remove_group(players_tuple, coord_up, color, p, visited)
     if coord_lt[0] >= 0 and not coord_lt in visited:
         if table[coord_lt[0]][coord_lt[1]].return_info("status") == color:
-            result_lt = _remove_group(players_tuple, coord_lt, color, p+1, visited)
+            result_lt = _remove_group(players_tuple, coord_lt, color, p, visited)
     if coord_rt[0] <= 8 and not coord_rt in visited:
         if table[coord_rt[0]][coord_rt[1]].return_info("status") == color:
-            result_rt = _remove_group(players_tuple, coord_rt, color, p+1, visited)
+            result_rt = _remove_group(players_tuple, coord_rt, color, p, visited)
     if coord_dn[1] <= 8 and not coord_dn in visited:
         if table[coord_dn[0]][coord_dn[1]].return_info("status") == color:
-            result_dn = _remove_group(players_tuple, coord_dn, color, p+1, visited)
+            result_dn = _remove_group(players_tuple, coord_dn, color, p, visited)
     result = p + result_lt + result_up + result_rt + result_dn
     return result
 
@@ -208,10 +219,10 @@ def Make_move(current_player, destination):                 # назначенн
     turn = PENDING_GAMES_INFO[players_tuple][0]
     if turn[0][0] == "p":
         turn[0] = "white" if turn[0] == "pwhite" else "black"
-    if turn[0] == color:
+    if turn[0] == color or (players_tuple[0] == current_player and turn[0] == "black") or (players_tuple[1] == current_player and turn[0] == "white"):
         table = PENDING_GAMES_INFO[players_tuple][1]
         if table[dest[0]][dest[1]].available:
-            table[dest[0]][dest[1]].status = color
+            table[dest[0]][dest[1]].status = "black" if turn[0] == "black" else "white"
             table[dest[0]][dest[1]].available = False
             print(f"{current_player} successfully made a move - {color} to the {dest[0]} - {dest[1]}")
             turn[0] = "white" if turn[0] == "black" else "black"
@@ -247,7 +258,7 @@ def Pass_turn(player):
     else:
         turn[0] = "pwhite" if turn[0] == "black" else "pblack"
         print(f"player {player} passed their turn. Waiting for the opponent's respond.")
-        return f"Ви пропустили хід. Далі хід {players_tuple[0] if turn[0] == "black" else players_tuple[1]}"
+        return f"Ви пропустили хід. Далі хід {players_tuple[1] if turn[0] == "black" else players_tuple[0]}"
 
 def Start_game(table_size=9, player1="player1", player2="player2"):
     players_tuple = (player1, player2) 
