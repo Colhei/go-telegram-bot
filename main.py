@@ -49,6 +49,12 @@ async def show_table(message: types.Message):
     print(f"showing the table")
     await message.answer(Return_table(player))
 
+@dp.message(Command("captures"))
+async def show_captures(message: types.Message):
+    player = "@" + message.from_user.username
+    print(f"player {player} is trying to see the table")
+    await message.answer(Show_captures(player))
+
 @dp.message(Command("check_games"))
 async def check_pending_games(message: types.Message):
     print("started checking pending games.")

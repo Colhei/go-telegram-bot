@@ -101,30 +101,38 @@ def _analyze_group(players_tuple, coord, color, visited=None):
         if table[coord_up[0]][coord_up[1]].return_info("status") == color:
             result_up = _analyze_group(players_tuple, coord_up, color, visited)
         elif table[coord_up[0]][coord_up[1]].available:
-            return True
+            result_up = True
         else:
-            return False
+            result_up = False
+    else:
+        reslt_up = False
     if coord_lt[1] >= 0 and not coord_lt in visited:
         if table[coord_lt[0]][coord_lt[1]].return_info("status") == color:
             result_lt = _analyze_group(players_tuple, coord_lt, color, visited)
         elif table[coord_lt[0]][coord_lt[1]].available:
-            return True
+            result_lt = True
         else:
-            return False
+            result_lt = False
+    else:
+        result_lt = False
     if coord_rt[1] <= 8 and not coord_rt in visited:
         if table[coord_rt[0]][coord_rt[1]].return_info("status") == color:
             result_rt = _analyze_group(players_tuple, coord_rt, color, visited)
         elif table[coord_rt[0]][coord_rt[1]].available:
-            return True
+            result_rt = True
         else:
-            return False
+            result_rt = False
+    else:
+        result_rt = False
     if coord_dn[0] <= 8 and not coord_dn in visited:
         if table[coord_dn[0]][coord_dn[1]].return_info("status") == color:
             result_dn = _analyze_group(players_tuple, coord_dn, color, visited)
         elif table[coord_dn[0]][coord_dn[1]].available:
-            return True
+            result_dn = True
         else:
-            return False
+            result_dn = False
+    else:
+        result_dn = False
     result = result_lt or result_up or result_rt or result_dn
     return result
 
@@ -134,25 +142,25 @@ def _remove_group(players_tuple, coord, color, p=0, visited=None):
     visited.append(coord)
     p += 1
     table = PENDING_GAMES_INFO[players_tuple][1]
-    coord_lt = (coord[0]-1, coord[1])
-    coord_up = (coord[0], coord[1]-1)
-    coord_rt = (coord[0]+1, coord[1])
-    coord_dn = (coord[0], coord[1]+1)
+    coord_lt = (coord[0], coord[1]-1)
+    coord_up = (coord[0]-1, coord[1])
+    coord_rt = (coord[0], coord[1]+1)
+    coord_dn = (coord[0]+1, coord[1])
     table[coord[0]][coord[1]].status = "cross"
     table[coord[0]][coord[1]].available = True
     result = result_lt = result_up = result_rt = result_dn = 0
-    if coord_up[1] >= 0 and not coord_up in visited:
+    if coord_up[0] >= 0 and not coord_up in visited:
         if table[coord_up[0]][coord_up[1]].return_info("status") == color:
-            result_up = _remove_group(players_tuple, coord_up, color, p, visited)
-    if coord_lt[0] >= 0 and not coord_lt in visited:
+            result_up = _remove_group(players_tuple, coord_up, color, 0, visited)
+    if coord_lt[1] >= 0 and not coord_lt in visited:
         if table[coord_lt[0]][coord_lt[1]].return_info("status") == color:
-            result_lt = _remove_group(players_tuple, coord_lt, color, p, visited)
-    if coord_rt[0] <= 8 and not coord_rt in visited:
+            result_lt = _remove_group(players_tuple, coord_lt, color, 0, visited)
+    if coord_rt[1] <= 8 and not coord_rt in visited:
         if table[coord_rt[0]][coord_rt[1]].return_info("status") == color:
-            result_rt = _remove_group(players_tuple, coord_rt, color, p, visited)
-    if coord_dn[1] <= 8 and not coord_dn in visited:
+            result_rt = _remove_group(players_tuple, coord_rt, color, 0, visited)
+    if coord_dn[0] <= 8 and not coord_dn in visited:
         if table[coord_dn[0]][coord_dn[1]].return_info("status") == color:
-            result_dn = _remove_group(players_tuple, coord_dn, color, p, visited)
+            result_dn = _remove_group(players_tuple, coord_dn, color, 0, visited)
     result = p + result_lt + result_up + result_rt + result_dn
     return result
 
@@ -168,11 +176,22 @@ def _analyze_table(players_tuple):
                     print(f"found a dead group. deleting it from the desk")
                     color = table[i][j].return_info("status")
                     dead_group = _remove_group(players_tuple, (i, j), cross_status)
-                    if color == "black":
+                    if color == "white":
                         captures[0] += dead_group
                     else:
                         captures[1] += dead_group
                     print(f"added {dead_group} of stones to captures for {players_tuple[0] if color == "black" else players_tuple[1]}")
+
+def Show_captures(player):
+    players_tuple = None
+    for key in PENDING_GAMES:
+        if key == player or PENDING_GAMES[key] == player:
+            players_tuple = (key, PENDING_GAMES[key])
+    if players_tuple == None:
+        print(f"player {player} tryed to look for captured stones, but doesnt play any game.")
+        return f"Ви не граєте жодної гри, щоб побачити захоплені камінці."
+    result = f"{players_tuple[0]}(чорні): {PENDING_GAMES_CAPTURED[players_tuple][0]}\n {players_tuple[1]}(білі): {PENDING_GAMES_CAPTURED[players_tuple][1]}"
+    return result
 
 def To_challenge(player1, player2):
     PENDING_DUEL_REQUESTS[player1] = player2 
@@ -238,19 +257,17 @@ def Make_move(current_player, destination):                 # назначенн
         return f"Ще не ваш хід. Дочекайтеся суперника та зробіть хід після нього"
 
 def Pass_turn(player):
+    players_tuple = None
     for key in PENDING_GAMES:
-        if player == key:
-            color = "white"
+        if player == key or player == PENDING_GAMES[key]:
             players_tuple = (key, PENDING_GAMES[key])
-        elif player == PENDING_GAMES[key]:
-            color = "black"
-            players_tuple = (key, PENDING_GAMES[key])
-        else:
-            print(f"player {player} can not pass their turn. Did not find their table")
-            return f"Неможливо пропустити хід, не граючи жодної гри."
+    if players_tuple == None:
+        print(f"player {player} is trying to pass his turn, but has no pending game")
+        return f"Не можливо пропустити хід, не граючи жодної гри."
+
     turn = PENDING_GAMES_INFO[players_tuple][0]
     if turn[0][0] == "p":
-        if "p"+color != turn:
+        if ("black" in turn[0][0] and players_tuple[0] == player) or ("white" in turn[0][0] and player_tuple[1] == player):
             print(f"player {player} can not pass their turn. Not their turn.")
             return f"Неможливо пропустити хід. Ще не ваша черга."
         print(f"player {player} passed his turn, ending the game")
